@@ -46,7 +46,7 @@ const io = socketIo(server, {
                 return callback(null, true);
             }
             const allowed = process.env.FRONTEND_URL ? 
-                process.env.FRONTEND_URL.split(',').map(url => url.trim().toLowerCase()) : 
+                process.env.FRONTEND_URL.split(',').map(url => url.trim().replace(/\/$/, '').toLowerCase()) : 
                 ["http://localhost:5173", "http://localhost:3000", "http://localhost:3001"];
             
             if (allowed.indexOf(origin.toLowerCase()) !== -1 || allowed.includes('*')) {
