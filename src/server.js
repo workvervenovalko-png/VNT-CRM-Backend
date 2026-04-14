@@ -32,33 +32,53 @@ const notificationRoutes = require('./routes/notificationRoutes');
 
 
 
+// ==================== CORS CONFIGURATION ====================
+
+// Sanitize and prepare allowed origins
+const getAllowedOrigins = () => {
+    const raw = process.env.FRONTEND_URL ? 
+        process.env.FRONTEND_URL.split(',') : 
+        ["http://localhost:5173", "http://localhost:3000", "http://localhost:3001"];
+    
+    return raw.map(url => url.trim().replace(/\/$/, '').toLowerCase());
+};
+
+const allowedOrigins = getAllowedOrigins();
+console.log('🚀 CORS Allowed Origins:', allowedOrigins);
+
+const corsOptions = {
+    origin: function (origin, callback) {
+        // Allow requests with no origin (like mobile apps, curl, or same-origin)
+        if (!origin) return callback(null, true);
+        
+        // In development, we can be more lenient
+        if (process.env.NODE_ENV === 'development') return callback(null, true);
+
+        const sanitizedOrigin = origin.trim().replace(/\/$/, '').toLowerCase();
+        
+        if (allowedOrigins.indexOf(sanitizedOrigin) !== -1 || allowedOrigins.includes('*')) {
+            callback(null, true);
+        } else {
+            console.error(`🛑 CORS Blocked: ${origin}`);
+            callback(new Error('Address Not allowed by CORS'), false);
+        }
+    },
+    credentials: true,
+    methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
+    allowedHeaders: ["Content-Type", "Authorization", "X-Requested-With", "Accept"]
+};
+
 // Initialize express app
 const app = express();
+
+// Enable CORS early
+app.use(cors(corsOptions));
 
 // Create HTTP server
 const server = http.createServer(app);
 
-// Initialize Socket.io
-const io = socketIo(server, {
-    cors: {
-        origin: function (origin, callback) {
-            if (!origin || process.env.NODE_ENV === 'development') {
-                return callback(null, true);
-            }
-            const allowed = process.env.FRONTEND_URL ? 
-                process.env.FRONTEND_URL.split(',').map(url => url.trim().replace(/\/$/, '').toLowerCase()) : 
-                ["http://localhost:5173", "http://localhost:3000", "http://localhost:3001"];
-            
-            if (allowed.indexOf(origin.toLowerCase()) !== -1 || allowed.includes('*')) {
-                callback(null, true);
-            } else {
-                callback(null, false);
-            }
-        },
-        methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
-        credentials: true
-    }
-});
+// Initialize Socket.io with the SAME cors options
+const io = socketIo(server, { cors: corsOptions });
 
 // Make io accessible globally or pass it to routes
 app.set('io', io);
@@ -82,33 +102,6 @@ io.on('connection', (socket) => {
 // Removed redundant call - handled in initializeServer() below
 
 // ==================== MIDDLEWARE ====================
-
-// Enable CORS for frontend
-const allowedOrigins = process.env.FRONTEND_URL ? 
-    process.env.FRONTEND_URL.split(',').map(url => url.trim()) : 
-    ["http://localhost:5173", "http://localhost:3000", "http://localhost:3001"];
-
-app.use(cors({
-    origin: function (origin, callback) {
-        // allow requests with no origin (like mobile apps or curl requests)
-        if (!origin) return callback(null, true);
-        
-        const allowed = process.env.FRONTEND_URL ? 
-            process.env.FRONTEND_URL.split(',').map(url => url.trim()) : 
-            ["http://localhost:5173", "http://localhost:3000", "http://localhost:3001"];
-
-        if (allowed.indexOf(origin) !== -1 || allowed.includes('*') || allowed.includes(origin)) {
-            return callback(null, true);
-        } else {
-            // For development, be lenient if the origins list is potentially outdated
-            if (process.env.NODE_ENV === 'development') return callback(null, true);
-            return callback(new Error('Not allowed by CORS'), false);
-        }
-    },
-    credentials: true,
-    methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization']
-}));
 
 // Parse JSON bodies
 app.use(express.json({ limit: '10mb' }));
