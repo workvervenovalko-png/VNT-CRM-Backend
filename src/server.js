@@ -34,13 +34,21 @@ const notificationRoutes = require('./routes/notificationRoutes');
 
 // ==================== CORS CONFIGURATION ====================
 
-// Sanitize and prepare allowed origins
+// Sanitize and prepare allowed origins (keep only protocol + domain)
 const getAllowedOrigins = () => {
     const raw = process.env.FRONTEND_URL ? 
         process.env.FRONTEND_URL.split(',') : 
         ["http://localhost:5173", "http://localhost:3000", "http://localhost:3001"];
     
-    return raw.map(url => url.trim().replace(/\/$/, '').toLowerCase());
+    return raw.map(url => {
+        try {
+            const parsed = new URL(url.trim().toLowerCase());
+            return `${parsed.protocol}//${parsed.host}`;
+        } catch (e) {
+            // Fallback for malformed URLs
+            return url.trim().replace(/\/$/, '').toLowerCase();
+        }
+    });
 };
 
 const allowedOrigins = getAllowedOrigins();
