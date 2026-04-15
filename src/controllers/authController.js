@@ -461,7 +461,7 @@ const initiateForgotPassword = async (req, res) => {
         
         // Set OTP and expiry (10 mins)
         user.resetPasswordOTP = otp;
-        user.resetPasswordOTPExpire = Date.now() + 10 * 60 * 1000;
+        user.resetPasswordOTPExpire = new Date(Date.now() + 10 * 60 * 1000);
         await user.save({ validateBeforeSave: false });
 
         // Send OTP Email
@@ -497,22 +497,25 @@ const verifyOTP = async (req, res) => {
         const { email, otp } = req.body;
         const normalizedEmail = sanitizeEmail(email);
 
-        const user = await User.findOne({
-            email: normalizedEmail,
-            resetPasswordOTP: otp,
-            resetPasswordOTPExpire: { $gt: Date.now() }
-        });
-
-        if (!user) {
+        const user = await User.findOne({ email: normalizedEmail });
+        
+        if (!user || user.resetPasswordOTP !== otp.toString().trim()) {
             return res.status(400).json({
                 success: false,
-                message: 'Invalid or expired OTP'
+                message: 'The security code you entered is incorrect'
+            });
+        }
+
+        if (new Date(user.resetPasswordOTPExpire) < new Date()) {
+            return res.status(400).json({
+                success: false,
+                message: 'This security code has expired. Please request a new one.'
             });
         }
 
         res.status(200).json({
             success: true,
-            message: 'OTP verified successfully'
+            message: 'Identity verified successfully'
         });
 
     } catch (error) {
@@ -530,16 +533,19 @@ const resetPassword = async (req, res) => {
         const { email, otp, password } = req.body;
         const normalizedEmail = sanitizeEmail(email);
 
-        const user = await User.findOne({
-            email: normalizedEmail,
-            resetPasswordOTP: otp,
-            resetPasswordOTPExpire: { $gt: Date.now() }
-        });
+        const user = await User.findOne({ email: normalizedEmail });
 
-        if (!user) {
+        if (!user || user.resetPasswordOTP !== otp.toString().trim()) {
             return res.status(400).json({
                 success: false,
-                message: 'Session expired or invalid OTP. Please try again.'
+                message: 'Invalid or expired security code. Please restart the recovery process.'
+            });
+        }
+
+        if (new Date(user.resetPasswordOTPExpire) < new Date()) {
+            return res.status(400).json({
+                success: false,
+                message: 'This recovery session has expired. Please request a new code.'
             });
         }
 
