@@ -410,6 +410,28 @@ router.post('/leads', protect, async (req, res) => {
             completedAt: new Date()
         });
 
+        // Trigger Assignment Email via Resend
+        if (populatedLead.assignedTo && populatedLead.assignedTo._id.toString() !== req.user._id.toString()) {
+            const { sendEmail } = require('../utils/emailService');
+            const { getAssignmentUpdateTemplate } = require('../utils/emailTemplates');
+            try {
+                const actionUrl = `${process.env.FRONTEND_URL || 'http://localhost:5173'}/crm`;
+                const emailHtml = getAssignmentUpdateTemplate(
+                    populatedLead.assignedTo.fullName || 'Team Member',
+                    'New Lead Assignment',
+                    `You have been assigned a new lead: ${lead.name} from ${lead.company || 'Unknown Company'}.`,
+                    actionUrl
+                );
+                sendEmail({
+                    to: populatedLead.assignedTo.email,
+                    subject: 'New Lead Assigned to You',
+                    html: emailHtml
+                });
+            } catch (err) {
+                console.error('Failed to dispatch assignment email:', err);
+            }
+        }
+
         res.status(201).json({
             success: true,
             data: populatedLead,
@@ -760,6 +782,28 @@ router.post('/deals', protect, async (req, res) => {
             completed: true,
             completedAt: new Date()
         });
+
+        // Trigger Assignment Email via Resend
+        if (populatedDeal.owner && populatedDeal.owner._id.toString() !== req.user._id.toString()) {
+            const { sendEmail } = require('../utils/emailService');
+            const { getAssignmentUpdateTemplate } = require('../utils/emailTemplates');
+            try {
+                const actionUrl = `${process.env.FRONTEND_URL || 'http://localhost:5173'}/crm`;
+                const emailHtml = getAssignmentUpdateTemplate(
+                    populatedDeal.owner.fullName || 'Team Member',
+                    'New Deal Assignment',
+                    `You have been assigned a new deal: ${deal.title} valued at $${deal.value}.`,
+                    actionUrl
+                );
+                sendEmail({
+                    to: populatedDeal.owner.email,
+                    subject: 'New Pipeline Deal Assigned',
+                    html: emailHtml
+                });
+            } catch (err) {
+                console.error('Failed to dispatch deal assignment email:', err);
+            }
+        }
 
         res.status(201).json({
             success: true,
@@ -1221,6 +1265,31 @@ router.post('/accounts', protect, async (req, res) => {
         };
 
         const account = await CRMAccount.create(accountData);
+        const populatedAccount = await CRMAccount.findById(account._id)
+            .populate('assignedTo', 'fullName email');
+
+        // Trigger Assignment Email via Resend
+        if (populatedAccount.assignedTo && populatedAccount.assignedTo._id.toString() !== req.user._id.toString()) {
+            const { sendEmail } = require('../utils/emailService');
+            const { getAssignmentUpdateTemplate } = require('../utils/emailTemplates');
+            try {
+                const actionUrl = `https://www.vervenovatechcrm.online/crm/accounts`;
+                const emailHtml = getAssignmentUpdateTemplate(
+                    populatedAccount.assignedTo.fullName || 'Team Member',
+                    'Account Assignment',
+                    `You have been assigned to manage a new account: ${account.name}.`,
+                    actionUrl
+                );
+                sendEmail({
+                    to: populatedAccount.assignedTo.email,
+                    subject: 'New CRM Account Assigned',
+                    html: emailHtml
+                });
+            } catch (err) {
+                console.error('Failed to dispatch account assignment email:', err);
+            }
+        }
+
         res.status(201).json({
             success: true,
             data: account,
@@ -1340,7 +1409,30 @@ router.post('/activities', protect, async (req, res) => {
         const activity = await Activity.create(activityData);
         const populatedActivity = await Activity.findById(activity._id)
             .populate('relatedTo')
-            .populate('assignedTo', 'fullName');
+            .populate('assignedTo', 'fullName email')
+            .populate('createdBy', 'fullName');
+
+        // Trigger Assignment Email via Resend
+        if (populatedActivity.assignedTo && populatedActivity.assignedTo._id.toString() !== req.user._id.toString()) {
+            const { sendEmail } = require('../utils/emailService');
+            const { getAssignmentUpdateTemplate } = require('../utils/emailTemplates');
+            try {
+                const actionUrl = `https://www.vervenovatechcrm.online/crm/activities`;
+                const emailHtml = getAssignmentUpdateTemplate(
+                    populatedActivity.assignedTo.fullName || 'Team Member',
+                    `New ${activity.type.toUpperCase()} Assigned`,
+                    `A new ${activity.type} task titled "${activity.title}" has been assigned to you by ${populatedActivity.createdBy.fullName}. Due Date: ${activity.dueDate ? new Date(activity.dueDate).toLocaleDateString() : 'None'}.`,
+                    actionUrl
+                );
+                sendEmail({
+                    to: populatedActivity.assignedTo.email,
+                    subject: `New ${activity.type.toUpperCase()} Notification`,
+                    html: emailHtml
+                });
+            } catch (err) {
+                console.error('Failed to dispatch activity assignment email:', err);
+            }
+        }
 
         res.status(201).json({
             success: true,

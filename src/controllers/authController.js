@@ -437,6 +437,129 @@ const logout = async (req, res) => {
     }
 };
 
+/**
+ * @desc    Initiate forgot password process (Generate random OTP)
+ * @route   POST /api/auth/forgot-password
+ * @access  Public
+ */
+const initiateForgotPassword = async (req, res) => {
+    try {
+        const { email } = req.body;
+        const normalizedEmail = sanitizeEmail(email);
+
+        const user = await User.findOne({ email: normalizedEmail });
+        if (!user) {
+            // SECURITY: Don't reveal if user exists. Just return success.
+            return res.status(200).json({
+                success: true,
+                message: 'If your email is registered, you will receive an OTP shortly.'
+            });
+        }
+
+        // Generate 6-digit random OTP
+        const otp = Math.floor(100000 + Math.random() * 900000).toString();
+        
+        // Set OTP and expiry (10 mins)
+        user.resetPasswordOTP = otp;
+        user.resetPasswordOTPExpire = Date.now() + 10 * 60 * 1000;
+        await user.save({ validateBeforeSave: false });
+
+        // Send OTP Email
+        const { sendEmail } = require('../utils/emailService');
+        const { getOTPEmailTemplate } = require('../utils/emailTemplates');
+        
+        const emailHtml = getOTPEmailTemplate(user.fullName, otp);
+        await sendEmail({
+            to: user.email,
+            subject: 'Your Password Reset OTP - Verve Nova Tech',
+            html: emailHtml,
+            from: 'SUPPORT'
+        });
+
+        res.status(200).json({
+            success: true,
+            message: 'OTP sent to your registered email address'
+        });
+
+    } catch (error) {
+        console.error('Forgot Password Error:', error);
+        res.status(500).json({ success: false, message: 'Failed to initiate password reset' });
+    }
+};
+
+/**
+ * @desc    Verify OTP for password reset
+ * @route   POST /api/auth/verify-otp
+ * @access  Public
+ */
+const verifyOTP = async (req, res) => {
+    try {
+        const { email, otp } = req.body;
+        const normalizedEmail = sanitizeEmail(email);
+
+        const user = await User.findOne({
+            email: normalizedEmail,
+            resetPasswordOTP: otp,
+            resetPasswordOTPExpire: { $gt: Date.now() }
+        });
+
+        if (!user) {
+            return res.status(400).json({
+                success: false,
+                message: 'Invalid or expired OTP'
+            });
+        }
+
+        res.status(200).json({
+            success: true,
+            message: 'OTP verified successfully'
+        });
+
+    } catch (error) {
+        res.status(500).json({ success: false, message: 'OTP verification failed' });
+    }
+};
+
+/**
+ * @desc    Reset password using verified OTP
+ * @route   POST /api/auth/reset-password
+ * @access  Public
+ */
+const resetPassword = async (req, res) => {
+    try {
+        const { email, otp, password } = req.body;
+        const normalizedEmail = sanitizeEmail(email);
+
+        const user = await User.findOne({
+            email: normalizedEmail,
+            resetPasswordOTP: otp,
+            resetPasswordOTPExpire: { $gt: Date.now() }
+        });
+
+        if (!user) {
+            return res.status(400).json({
+                success: false,
+                message: 'Session expired or invalid OTP. Please try again.'
+            });
+        }
+
+        // Update password and clear OTP fields
+        user.password = password;
+        user.resetPasswordOTP = undefined;
+        user.resetPasswordOTPExpire = undefined;
+        await user.save();
+
+        res.status(200).json({
+            success: true,
+            message: 'Password reset successfully. You can now login with your new password.'
+        });
+
+    } catch (error) {
+        console.error('Reset Password Error:', error);
+        res.status(500).json({ success: false, message: 'Failed to reset password' });
+    }
+};
+
 module.exports = {
     registerAdmin,
     login,
@@ -444,6 +567,9 @@ module.exports = {
     employeeLogin: login,
     getMe,
     logout,
+    initiateForgotPassword,
+    verifyOTP,
+    resetPassword,
     registerValidation,
     loginValidation
 };

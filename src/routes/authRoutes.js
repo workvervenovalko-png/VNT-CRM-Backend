@@ -10,6 +10,9 @@ const {
     login,
     getMe,
     logout,
+    initiateForgotPassword,
+    verifyOTP,
+    resetPassword,
     registerValidation,
     loginValidation
 } = require('../controllers/authController');
@@ -46,6 +49,27 @@ router.post(
 // Backward compatibility routes (both point to unified login)
 router.post('/admin/login', loginLimiter, loginValidation, login);
 router.post('/employee/login', loginLimiter, loginValidation, login);
+
+/**
+ * @route   POST /api/auth/forgot-password
+ * @desc    Initiate forgot password
+ * @access  Public
+ */
+router.post('/forgot-password', initiateForgotPassword);
+
+/**
+ * @route   POST /api/auth/verify-otp
+ * @desc    Verify OTP
+ * @access  Public
+ */
+router.post('/verify-otp', verifyOTP);
+
+/**
+ * @route   POST /api/auth/reset-password
+ * @desc    Reset password
+ * @access  Public
+ */
+router.post('/reset-password', resetPassword);
 
 /**
  * @route   GET /api/auth/me

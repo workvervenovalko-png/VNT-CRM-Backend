@@ -191,6 +191,26 @@ exports.createUser = async (req, res, next) => {
 
     await user.save();
 
+    // Trigger Account Creation Email via Resend
+    const { sendEmail } = require('../utils/emailService');
+    const { getWelcomeEmailTemplate } = require('../utils/emailTemplates');
+    try {
+      // Use the official production login link provided by the user
+      const loginUrl = 'https://www.vervenovatechcrm.online/login';
+      
+      const emailHtml = getWelcomeEmailTemplate(fullName, role, email, password, loginUrl);
+      
+      // Run asynchronously to prevent delaying the API response
+      sendEmail({
+        to: email,
+        subject: `Congratulations! Your Verve Nova CRM Account is Ready 🎉`,
+        html: emailHtml,
+        from: 'CAREER' // Use official recruitment sender
+      });
+    } catch (emailErr) {
+      console.error('Failed to dispatch welcome email:', emailErr);
+    }
+
     res.status(201).json({
       success: true,
       message: `${isIntern ? 'Intern' : 'User'} created successfully`,

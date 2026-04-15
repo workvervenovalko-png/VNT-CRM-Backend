@@ -113,8 +113,10 @@ const userSchema = new mongoose.Schema({
         default: null
     },
 
-    // Password reset token (for forgot password feature)
+    // Password reset token/OTP (for forgot password feature)
     resetPasswordToken: String,
+    resetPasswordOTP: String,
+    resetPasswordOTPExpire: Date,
     resetPasswordExpire: Date,
 
     // ==================== INTERN SPECIFIC FIELDS ====================
