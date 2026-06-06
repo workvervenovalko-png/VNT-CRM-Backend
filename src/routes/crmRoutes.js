@@ -48,7 +48,9 @@ const buildRoleQuery = async (user, assignedField = 'assignedTo') => {
         case 'SUPPORT':
         case 'INTERN':
         default:
-            return { [assignedField]: user._id };
+            // return { [assignedField]: user._id };
+            // Simplified Shared Pool - everyone sees everything
+            return {};
     }
 };
 
@@ -56,7 +58,7 @@ const buildRoleQuery = async (user, assignedField = 'assignedTo') => {
  * Check if user can modify (write access)
  */
 const canWrite = (role) => {
-    const writeRoles = ['ADMIN', 'MANAGER', 'HR', 'EMPLOYEE', 'SALES'];
+    const writeRoles = ['ADMIN', 'MANAGER', 'HR', 'EMPLOYEE', 'SALES', 'INTERN'];
     return writeRoles.includes(role?.toUpperCase());
 };
 
