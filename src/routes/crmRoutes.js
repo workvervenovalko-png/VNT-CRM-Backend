@@ -12,6 +12,8 @@ const User = require('../models/User');
 
 // Import auth middleware from your existing system
 const { protect, authorize } = require('../middleware/authMiddleware');
+const { sendEmail } = require('../utils/emailService');
+const { getMeetingInviteTemplate } = require('../utils/emailTemplates');
 
 // ============================================
 // HELPER FUNCTIONS
@@ -1634,6 +1636,27 @@ router.post('/meetings', protect, async (req, res) => {
         const populatedMeeting = await Meeting.findById(meeting._id)
             .populate('host', 'fullName email avatar')
             .populate('participants.user', 'fullName email');
+
+        // Optional: Send Email to Client
+        if (req.body.sendEmailToClient && req.body.clientEmail && req.body.clientName) {
+            const meetingDate = new Date(populatedMeeting.startDate).toLocaleDateString('en-US', {
+                weekday: 'short', month: 'short', day: 'numeric'
+            });
+            const meetingTime = populatedMeeting.startTime;
+            const htmlContent = getMeetingInviteTemplate(
+                req.body.clientName,
+                meetingDate,
+                meetingTime,
+                populatedMeeting.meetingLink || '',
+                populatedMeeting.title || 'Scheduled Meeting'
+            );
+            
+            await sendEmail({
+                to: req.body.clientEmail,
+                subject: `Meeting Invitation: ${populatedMeeting.title}`,
+                html: htmlContent
+            });
+        }
 
         res.status(201).json({
             success: true,

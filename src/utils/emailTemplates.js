@@ -300,8 +300,67 @@ const getOTPEmailTemplate = (name, otp) => {
     `;
 };
 
+/**
+ * Meeting Invitation Email Template
+ */
+const getMeetingInviteTemplate = (clientName, meetingDate, meetingTime, meetingLink, meetingTitle, companyName = 'Verve Nova Tech') => {
+    return `
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <meta charset="utf-8">
+      ${baseEmailStyle}
+    </head>
+    <body>
+      <div class="wrapper">
+        <div class="container">
+          <div class="header">
+            <h1 style="letter-spacing: 2px;">${companyName.toUpperCase()}</h1>
+            <div class="badge">Meeting Invitation</div>
+          </div>
+          <div class="content">
+            <div class="greeting">Dear ${clientName},</div>
+            <div class="text" style="margin-top: 15px;">
+              We have successfully scheduled a meeting with you regarding your recent inquiry. Please find the meeting details below:
+            </div>
+            
+            <div class="credentials-box">
+              <div class="cred-row">
+                <div class="cred-label">Topic</div>
+                <div class="cred-val">${meetingTitle}</div>
+              </div>
+              <div class="cred-row" style="margin-top: 12px;">
+                <div class="cred-label">Date & Time</div>
+                <div class="cred-val">${meetingDate} at ${meetingTime}</div>
+              </div>
+              ${meetingLink ? `
+              <div class="cred-row" style="margin-top: 12px;">
+                <div class="cred-label">Meeting Link</div>
+                <div class="cred-val"><a href="${meetingLink}" style="color: #4f46e5; text-decoration: none;">Join Meeting Here</a></div>
+              </div>` : ''}
+            </div>
+
+            <div class="btn-container">
+              ${meetingLink ? `<a href="${meetingLink}" class="btn">Join Meeting</a>` : ''}
+            </div>
+
+            <div class="text">
+              We look forward to speaking with you. If you need to reschedule, please let us know.
+            </div>
+          </div>
+          <div class="footer">
+            <p>&copy; ${new Date().getFullYear()} ${companyName}. All rights reserved.</p>
+          </div>
+        </div>
+      </div>
+    </body>
+    </html>
+    `;
+};
+
 module.exports = {
     getWelcomeEmailTemplate,
     getAssignmentUpdateTemplate,
-    getOTPEmailTemplate
+    getOTPEmailTemplate,
+    getMeetingInviteTemplate
 };
