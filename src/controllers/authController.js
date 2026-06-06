@@ -329,7 +329,7 @@ const login = async (req, res) => {
                 case ROLES.HR:
                     redirectTo = '/hr/dashboard';
                     break;
-                case ROLES.MANAGER:
+                case ROLES.PARTNER:
                     redirectTo = '/manager/dashboard';
                     break;
                 case ROLES.INTERN:

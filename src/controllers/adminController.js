@@ -30,7 +30,7 @@ exports.getDashboardStats = async (req, res,next) => {
       pendingReports,
       recentUsers
     ] = await Promise.all([
-      User.countDocuments({ role: { $in: ['EMPLOYEE', 'HR', 'MANAGER'] }, companyId: req.user.companyId._id || req.user.companyId }),
+      User.countDocuments({ role: { $in: ['EMPLOYEE', 'HR', 'PARTNER'] }, companyId: req.user.companyId._id || req.user.companyId }),
       User.countDocuments({ role: 'INTERN', companyId: req.user.companyId._id || req.user.companyId }),
       User.countDocuments({ isActive: true, role: { $ne: 'ADMIN' }, companyId: req.user.companyId._id || req.user.companyId }),
       User.countDocuments({ isActive: false, role: { $ne: 'ADMIN' }, companyId: req.user.companyId._id || req.user.companyId }),

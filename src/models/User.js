@@ -10,8 +10,8 @@ const jwt = require('jsonwebtoken');
 // Define allowed roles as constants for consistency
 const ROLES = {
     ADMIN: 'ADMIN',
+    PARTNER: 'PARTNER',
     HR: 'HR',
-    MANAGER: 'MANAGER',
     EMPLOYEE: 'EMPLOYEE',
     INTERN: 'INTERN',
     SALES: 'SALES'

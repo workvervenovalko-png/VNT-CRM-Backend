@@ -33,7 +33,7 @@ const buildRoleQuery = async (user, assignedField = 'assignedTo') => {
         case 'ADMIN':
             return {}; // Admin sees everything
 
-        case 'MANAGER':
+        case 'PARTNER':
         case 'HR':
             // Manager/HR sees their team's data
             const teamMembers = await User.find({
@@ -60,7 +60,7 @@ const buildRoleQuery = async (user, assignedField = 'assignedTo') => {
  * Check if user can modify (write access)
  */
 const canWrite = (role) => {
-    const writeRoles = ['ADMIN', 'MANAGER', 'HR', 'EMPLOYEE', 'SALES', 'INTERN'];
+    const writeRoles = ['ADMIN', 'PARTNER', 'HR', 'EMPLOYEE', 'SALES', 'INTERN'];
     return writeRoles.includes(role?.toUpperCase());
 };
 
@@ -68,7 +68,7 @@ const canWrite = (role) => {
  * Check if user can delete
  */
 const canDelete = (role) => {
-    const deleteRoles = ['ADMIN', 'MANAGER', 'HR'];
+    const deleteRoles = ['ADMIN', 'PARTNER', 'HR'];
     return deleteRoles.includes(role?.toUpperCase());
 };
 
@@ -357,7 +357,7 @@ router.get('/leads/:id', protect, async (req, res) => {
 
         // Check access
         const role = req.user.role?.toUpperCase();
-        if (!['ADMIN', 'MANAGER', 'HR'].includes(role) &&
+        if (!['ADMIN', 'PARTNER', 'HR'].includes(role) &&
             lead.assignedTo._id.toString() !== req.user._id.toString()) {
             return res.status(403).json({
                 success: false,
@@ -467,7 +467,7 @@ router.put('/leads/:id', protect, async (req, res) => {
 
         // Check authorization
         const role = req.user.role?.toUpperCase();
-        if (!['ADMIN', 'MANAGER', 'HR'].includes(role) &&
+        if (!['ADMIN', 'PARTNER', 'HR'].includes(role) &&
             lead.assignedTo.toString() !== req.user._id.toString()) {
             return res.status(403).json({
                 success: false,
@@ -731,7 +731,7 @@ router.get('/deals/:id', protect, async (req, res) => {
         }
 
         const role = req.user.role?.toUpperCase();
-        if (!['ADMIN', 'MANAGER', 'HR'].includes(role) &&
+        if (!['ADMIN', 'PARTNER', 'HR'].includes(role) &&
             deal.owner._id.toString() !== req.user._id.toString()) {
             return res.status(403).json({
                 success: false,
@@ -839,7 +839,7 @@ router.put('/deals/:id', protect, async (req, res) => {
         }
 
         const role = req.user.role?.toUpperCase();
-        if (!['ADMIN', 'MANAGER', 'HR'].includes(role) &&
+        if (!['ADMIN', 'PARTNER', 'HR'].includes(role) &&
             deal.owner.toString() !== req.user._id.toString()) {
             return res.status(403).json({
                 success: false,
@@ -1555,7 +1555,7 @@ router.get('/meetings', protect, async (req, res) => {
 
         // Also include meetings where user is a participant
         const role = req.user.role?.toUpperCase();
-        if (['ADMIN', 'MANAGER', 'HR'].includes(role)) {
+        if (['ADMIN', 'PARTNER', 'HR'].includes(role)) {
             query = {};
         }
 
@@ -2061,7 +2061,7 @@ router.get('/products/:id', protect, async (req, res) => {
 router.post('/products', protect, async (req, res) => {
     try {
         const role = req.user.role?.toUpperCase();
-        if (!['ADMIN', 'MANAGER', 'HR'].includes(role)) {
+        if (!['ADMIN', 'PARTNER', 'HR'].includes(role)) {
             return res.status(403).json({ success: false, message: 'Permission denied' });
         }
 
@@ -2094,7 +2094,7 @@ router.post('/products', protect, async (req, res) => {
 router.put('/products/:id', protect, async (req, res) => {
     try {
         const role = req.user.role?.toUpperCase();
-        if (!['ADMIN', 'MANAGER', 'HR'].includes(role)) {
+        if (!['ADMIN', 'PARTNER', 'HR'].includes(role)) {
             return res.status(403).json({ success: false, message: 'Permission denied' });
         }
 
@@ -2118,7 +2118,7 @@ router.put('/products/:id', protect, async (req, res) => {
 router.delete('/products/:id', protect, async (req, res) => {
     try {
         const role = req.user.role?.toUpperCase();
-        if (!['ADMIN', 'MANAGER'].includes(role)) {
+        if (!['ADMIN', 'PARTNER'].includes(role)) {
             return res.status(403).json({ success: false, message: 'Permission denied' });
         }
 
@@ -2551,7 +2551,7 @@ router.get('/reports/leaderboard', protect, async (req, res) => {
     try {
         const role = req.user.role?.toUpperCase();
 
-        if (!['ADMIN', 'MANAGER', 'HR'].includes(role)) {
+        if (!['ADMIN', 'PARTNER', 'HR'].includes(role)) {
             return res.status(403).json({
                 success: false,
                 message: 'Not authorized to view leaderboard'
@@ -2662,7 +2662,7 @@ router.get('/users/assignable', protect, async (req, res) => {
     try {
         const users = await User.find({
             isActive: { $ne: false },
-            role: { $in: ['ADMIN', 'MANAGER', 'HR', 'EMPLOYEE', 'SALES'] }
+            role: { $in: ['ADMIN', 'PARTNER', 'HR', 'EMPLOYEE', 'SALES'] }
         }).select('_id fullName email avatar role');
 
         res.json({

@@ -32,9 +32,9 @@ router.patch('/users/:id/toggle-status', writeLimiter, authorize('ADMIN', 'HR'),
 router.delete('/users/:id', writeLimiter, authorize('ADMIN'), adminController.deleteUser);
 
 // ==================== INTERN MANAGEMENT ====================
-router.get('/interns/:userId', adminLimiter, authorize('ADMIN', 'HR', 'MANAGER'), adminController.getInternDetails);
+router.get('/interns/:userId', adminLimiter, authorize('ADMIN', 'HR', 'PARTNER'), adminController.getInternDetails);
 router.put('/interns/:userId', writeLimiter, authorize('ADMIN', 'HR'), adminController.updateInternByAdmin);
-router.post('/interns/:userId/assign-task', writeLimiter, authorize('ADMIN', 'HR', 'MANAGER'), adminController.assignTaskToIntern);
+router.post('/interns/:userId/assign-task', writeLimiter, authorize('ADMIN', 'HR', 'PARTNER'), adminController.assignTaskToIntern);
 
 // ==================== ATTENDANCE ====================
 router.get('/attendance', searchLimiter, authorize('ADMIN', 'HR'), attendanceController.getAttendance);
@@ -45,10 +45,10 @@ router.put('/attendance/:id', writeLimiter, authorize('ADMIN', 'HR'), attendance
 router.delete('/attendance/:id', writeLimiter, authorize('ADMIN'), attendanceController.deleteAttendance);
 
 // ==================== WORK REPORTS ====================
-router.get('/reports', searchLimiter, authorize('ADMIN', 'HR', 'MANAGER'), workReportController.getWorkReports);
-router.get('/reports/pending-count', authorize('ADMIN', 'HR', 'MANAGER'), workReportController.getPendingCount);
-router.get('/reports/:id', authorize('ADMIN', 'HR', 'MANAGER'), workReportController.getWorkReportById);
-router.put('/reports/:id/review', writeLimiter, authorize('ADMIN', 'HR', 'MANAGER'), workReportController.reviewWorkReport);
+router.get('/reports', searchLimiter, authorize('ADMIN', 'HR', 'PARTNER'), workReportController.getWorkReports);
+router.get('/reports/pending-count', authorize('ADMIN', 'HR', 'PARTNER'), workReportController.getPendingCount);
+router.get('/reports/:id', authorize('ADMIN', 'HR', 'PARTNER'), workReportController.getWorkReportById);
+router.put('/reports/:id/review', writeLimiter, authorize('ADMIN', 'HR', 'PARTNER'), workReportController.reviewWorkReport);
 router.delete('/reports/:id', writeLimiter, authorize('ADMIN'), workReportController.deleteWorkReport);
 
 // ==================== EXPORT ====================

@@ -196,9 +196,10 @@ const skipIf = (condition) => {
 const roleBasedLimiter = {
     ADMIN: createRateLimiter(200, 60000),      // 200 requests/minute
     HR: createRateLimiter(150, 60000),         // 150 requests/minute
-    MANAGER: createRateLimiter(120, 60000),    // 120 requests/minute
+    PARTNER: createRateLimiter(120, 60000),    // 120 requests/minute
     EMPLOYEE: createRateLimiter(100, 60000),   // 100 requests/minute
-    INTERN: createRateLimiter(80, 60000)       // 80 requests/minute
+    INTERN: createRateLimiter(80, 60000),      // 80 requests/minute
+    SALES: createRateLimiter(100, 60000)       // 100 requests/minute
 };
 
 /**

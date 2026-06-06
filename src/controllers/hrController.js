@@ -17,7 +17,7 @@ exports.getDashboard = async (req, res) => {
 
     // Total employees count
     const totalEmployees = await User.countDocuments({
-      role: { $in: ['EMPLOYEE', 'INTERN', 'MANAGER'] },
+      role: { $in: ['EMPLOYEE', 'INTERN', 'PARTNER'] },
       isActive: true
     });
 
@@ -131,7 +131,7 @@ exports.getEmployeesForAttendance = async (req, res) => {
     // Get all active employees
     const employees = await User.find({
       isActive: true,
-      role: { $in: ['EMPLOYEE', 'INTERN', 'MANAGER', 'HR'] }
+      role: { $in: ['EMPLOYEE', 'INTERN', 'PARTNER', 'HR'] }
     })
       .select('fullName email department designation role')
       .sort({ fullName: 1 })
