@@ -55,9 +55,11 @@ exports.getDashboardStats = async (req, res,next) => {
       present: 0, absent: 0, late: 0, onLeave: 0
     };
     todayAttendance.forEach(item => {
-      const key = item._id.toLowerCase().replace('_', '');
-      if (attendanceSummary.hasOwnProperty(key)) {
-        attendanceSummary[key] = item.count;
+      if (item._id) {
+        const key = item._id.toLowerCase().replace('_', '');
+        if (attendanceSummary.hasOwnProperty(key)) {
+          attendanceSummary[key] = item.count;
+        }
       }
     });
 
