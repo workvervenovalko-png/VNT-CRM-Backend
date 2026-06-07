@@ -1,4 +1,5 @@
 const User = require('../models/User');
+const Attendance = require('../models/Attendance');
 const { createNotification } = require('./notificationController');
 const { sendEmail } = require('../utils/emailService');
 const { getAssignmentUpdateTemplate } = require('../utils/emailTemplates');
@@ -33,6 +34,23 @@ exports.getTeamInterns = async (req, res) => {
       User.countDocuments(query)
     ]);
 
+    // Fetch today's attendance for these interns
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const tomorrow = new Date(today);
+    tomorrow.setDate(tomorrow.getDate() + 1);
+
+    const internIds = interns.map(i => i._id);
+    const attendanceRecords = await Attendance.find({
+      user: { $in: internIds },
+      date: { $gte: today, $lt: tomorrow }
+    }).lean();
+
+    const attendanceMap = {};
+    attendanceRecords.forEach(att => {
+      attendanceMap[att.user.toString()] = att.status;
+    });
+
     // Format interns
     const formattedInterns = interns.map(intern => ({
       _id: intern._id,
@@ -42,7 +60,8 @@ exports.getTeamInterns = async (req, res) => {
       mobile: intern.mobile,
       department: intern.department || 'Not Assigned',
       assignedTasksCount: intern.internDetails?.assignedTasks?.length || 0,
-      joinedAt: intern.createdAt
+      joinedAt: intern.createdAt,
+      todayAttendance: attendanceMap[intern._id.toString()] || 'ABSENT'
     }));
 
     res.json({

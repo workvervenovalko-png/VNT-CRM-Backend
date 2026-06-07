@@ -13,7 +13,7 @@ const User = require('../models/User');
  */
 exports.getInternProfile = async (req, res, next) => {
     try {
-        const user = await User.findById(req.user.id);
+        const user = await User.findById(req.user.id).populate('teamLeader', 'fullName email mobile');
 
         if (!user || !user.internDetails) {
             return res.status(404).json({
@@ -33,7 +33,8 @@ exports.getInternProfile = async (req, res, next) => {
                 department: user.department,
                 designation: user.designation,
                 profilePicture: user.profilePicture
-            }
+            },
+            teamLeader: user.teamLeader // include populated team leader
         };
 
         res.json({
