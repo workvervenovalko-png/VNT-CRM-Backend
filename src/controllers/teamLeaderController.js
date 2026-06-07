@@ -144,3 +144,243 @@ exports.assignTaskToIntern = async (req, res) => {
     res.status(500).json({ success: false, message: 'Failed to assign task' });
   }
 };
+
+// Assign project to intern
+exports.assignProjectToIntern = async (req, res) => {
+  try {
+    const { userId } = req.params;
+    const { projectTitle } = req.body;
+    const tlId = req.user._id;
+
+    const user = await User.findOne({ _id: userId, role: 'INTERN', teamLeader: tlId });
+
+    if (!user) {
+      return res.status(404).json({ success: false, message: 'Intern not found or not mapped to you' });
+    }
+
+    if (!user.internDetails) user.internDetails = {};
+    if (!user.internDetails.projectWork) user.internDetails.projectWork = {};
+
+    user.internDetails.projectWork.projectTitle = projectTitle;
+    await user.save();
+
+    // Notify the intern
+    await createNotification(
+      user._id,
+      `You have been assigned a new project: ${projectTitle}`,
+      'info',
+      null,
+      'Project'
+    );
+
+    res.json({
+      success: true,
+      message: 'Project assigned successfully',
+      data: user.internDetails.projectWork
+    });
+  } catch (error) {
+    console.error('TL Assign Project Error:', error);
+    res.status(500).json({ success: false, message: 'Failed to assign project' });
+  }
+};
+
+// Get specific intern details (stripped of sensitive info)
+exports.getInternDetails = async (req, res) => {
+  try {
+    const { userId } = req.params;
+    const tlId = req.user._id;
+
+    const intern = await User.findOne({ _id: userId, role: 'INTERN', teamLeader: tlId })
+      .select('-password -__v -resetPasswordToken -resetPasswordExpire');
+
+    if (!intern) {
+      return res.status(404).json({ success: false, message: 'Intern not found in your team' });
+    }
+
+    // Strip sensitive info
+    const safeDetails = { ...intern.toObject() };
+    if (safeDetails.internDetails && safeDetails.internDetails.personal) {
+      delete safeDetails.internDetails.personal.aadhaarNumber;
+      delete safeDetails.internDetails.personal.panNumber;
+      delete safeDetails.internDetails.personal.bankDetails;
+      delete safeDetails.internDetails.personal.emergencyContact;
+    }
+
+    res.json({ success: true, data: safeDetails });
+  } catch (error) {
+    console.error('Get intern details error:', error);
+    res.status(500).json({ success: false, message: 'Failed to fetch intern details' });
+  }
+};
+
+// Get all assigned tasks across the team
+exports.getTeamTasks = async (req, res) => {
+  try {
+    const tlId = req.user._id;
+    const interns = await User.find({ role: 'INTERN', teamLeader: tlId })
+      .select('fullName email internDetails.assignedTasks');
+
+    let allTasks = [];
+    interns.forEach(intern => {
+      if (intern.internDetails && intern.internDetails.assignedTasks) {
+        intern.internDetails.assignedTasks.forEach(task => {
+          allTasks.push({
+            ...task.toObject(),
+            internId: intern._id,
+            internName: intern.fullName,
+            internEmail: intern.email
+          });
+        });
+      }
+    });
+
+    res.json({ success: true, data: allTasks });
+  } catch (error) {
+    console.error('Get team tasks error:', error);
+    res.status(500).json({ success: false, message: 'Failed to fetch team tasks' });
+  }
+};
+
+// Update task status for a team member
+exports.updateTaskStatus = async (req, res) => {
+  try {
+    const { userId, taskId } = req.params;
+    const { status } = req.body;
+    const tlId = req.user._id;
+
+    const intern = await User.findOne({ _id: userId, role: 'INTERN', teamLeader: tlId });
+    if (!intern || !intern.internDetails) {
+      return res.status(404).json({ success: false, message: 'Intern not found in your team' });
+    }
+
+    const task = intern.internDetails.assignedTasks.id(taskId);
+    if (!task) {
+      return res.status(404).json({ success: false, message: 'Task not found' });
+    }
+
+    task.status = status;
+    await intern.save();
+
+    res.json({ success: true, data: task });
+  } catch (error) {
+    console.error('Update task status error:', error);
+    res.status(500).json({ success: false, message: 'Failed to update task status' });
+  }
+};
+
+// Get historical attendance for the team
+exports.getTeamAttendance = async (req, res) => {
+  try {
+    const tlId = req.user._id;
+    const { startDate, endDate } = req.query;
+
+    const interns = await User.find({ role: 'INTERN', teamLeader: tlId }).select('_id');
+    const internIds = interns.map(i => i._id);
+
+    let query = { user: { $in: internIds } };
+    if (startDate && endDate) {
+      query.date = { $gte: new Date(startDate), $lte: new Date(endDate) };
+    } else {
+      // Default to last 30 days
+      const thirtyDaysAgo = new Date();
+      thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+      query.date = { $gte: thirtyDaysAgo };
+    }
+
+    const attendance = await Attendance.find(query).populate('user', 'fullName').sort({ date: -1 });
+
+    res.json({ success: true, data: attendance });
+  } catch (error) {
+    console.error('Get team attendance error:', error);
+    res.status(500).json({ success: false, message: 'Failed to fetch team attendance' });
+  }
+};
+
+// Get leaves for the team
+const Leave = require('../models/Leave');
+exports.getTeamLeaves = async (req, res) => {
+  try {
+    const tlId = req.user._id;
+    const interns = await User.find({ role: 'INTERN', teamLeader: tlId }).select('_id');
+    const internIds = interns.map(i => i._id);
+
+    const leaves = await Leave.find({ user: { $in: internIds } })
+      .populate('user', 'fullName')
+      .sort({ createdAt: -1 });
+
+    res.json({ success: true, data: leaves });
+  } catch (error) {
+    console.error('Get team leaves error:', error);
+    res.status(500).json({ success: false, message: 'Failed to fetch team leaves' });
+  }
+};
+
+// Review/Update leave status
+exports.reviewLeave = async (req, res) => {
+  try {
+    const { leaveId } = req.params;
+    const { status, reviewComments } = req.body;
+    const tlId = req.user._id;
+
+    const leave = await Leave.findById(leaveId).populate('user');
+    if (!leave) return res.status(404).json({ success: false, message: 'Leave not found' });
+
+    // Ensure user belongs to this TL
+    if (leave.user.teamLeader.toString() !== tlId.toString()) {
+      return res.status(403).json({ success: false, message: 'Unauthorized' });
+    }
+
+    leave.status = status;
+    leave.reviewedBy = tlId;
+    leave.reviewedAt = new Date();
+    if (reviewComments) leave.reviewComments = reviewComments;
+
+    await leave.save();
+
+    // Notify intern
+    await createNotification(
+      leave.user._id,
+      `Your leave request has been ${status.toLowerCase()} by your Team Leader.`,
+      status === 'APPROVED' ? 'success' : 'error',
+      null,
+      'Leave'
+    );
+
+    res.json({ success: true, data: leave });
+  } catch (error) {
+    console.error('Review leave error:', error);
+    res.status(500).json({ success: false, message: 'Failed to review leave' });
+  }
+};
+
+// Get progress reports (daily/weekly) for the team
+exports.getTeamReports = async (req, res) => {
+  try {
+    const tlId = req.user._id;
+    const interns = await User.find({ role: 'INTERN', teamLeader: tlId })
+      .select('fullName internDetails.academicWork');
+
+    let reports = { daily: [], weekly: [] };
+    
+    interns.forEach(intern => {
+      if (intern.internDetails && intern.internDetails.academicWork) {
+        // Daily
+        const daily = intern.internDetails.academicWork.dailyTaskUpdate || [];
+        daily.forEach(d => reports.daily.push({ ...d.toObject(), internId: intern._id, internName: intern.fullName }));
+        
+        // Weekly
+        const weekly = intern.internDetails.academicWork.weeklyProgressReport || [];
+        weekly.forEach(w => reports.weekly.push({ ...w.toObject(), internId: intern._id, internName: intern.fullName }));
+      }
+    });
+
+    // Sort by date/time descending
+    reports.daily.sort((a, b) => new Date(b.date) - new Date(a.date));
+    reports.weekly.sort((a, b) => new Date(b.submittedAt) - new Date(a.submittedAt));
+
+    res.json({ success: true, data: reports });
+  } catch (error) {
+    console.error('Get team reports error:', error);
+    res.status(500).json({ success: false, message: 'Failed to fetch team reports' });
+  }
+};
