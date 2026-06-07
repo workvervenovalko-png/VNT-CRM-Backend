@@ -27,33 +27,9 @@ const { getMeetingInviteTemplate } = require('../utils/emailTemplates');
  * - SUPPORT/INTERN: Read-only, own data
  */
 const buildRoleQuery = async (user, assignedField = 'assignedTo') => {
-    const role = user.role?.toUpperCase();
-
-    switch (role) {
-        case 'ADMIN':
-            return {}; // Admin sees everything
-
-        case 'PARTNER':
-        case 'HR':
-            // Manager/HR sees their team's data
-            const teamMembers = await User.find({
-                $or: [
-                    { manager: user._id },
-                    { department: user.department }
-                ]
-            }).select('_id');
-            const teamIds = [user._id, ...teamMembers.map(m => m._id)];
-            return { [assignedField]: { $in: teamIds } };
-
-        case 'EMPLOYEE':
-        case 'SALES':
-        case 'SUPPORT':
-        case 'INTERN':
-        default:
-            // return { [assignedField]: user._id };
-            // Simplified Shared Pool - everyone sees everything
-            return {};
-    }
+    // Simplified Shared Pool - everyone sees everything
+    // The user requested that leads added by admin should be visible to partners and sales
+    return {};
 };
 
 /**
