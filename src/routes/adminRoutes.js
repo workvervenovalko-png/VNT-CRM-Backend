@@ -25,11 +25,11 @@ router.use(protect);
 router.get('/dashboard', authorize('ADMIN', 'HR', 'PARTNER'), adminController.getDashboardStats);
 
 // ==================== USER MANAGEMENT ====================
-router.get('/users', searchLimiter, authorize('ADMIN', 'HR', 'PARTNER'), adminController.getUsers);
-router.post('/users', writeLimiter, authorize('ADMIN', 'HR', 'PARTNER'), adminController.createUser);
-router.put('/users/:id', writeLimiter, authorize('ADMIN', 'HR', 'PARTNER'), adminController.updateUser);
-router.patch('/users/:id/toggle-status', writeLimiter, authorize('ADMIN', 'HR', 'PARTNER'), adminController.toggleUserStatus);
-router.delete('/users/:id', writeLimiter, authorize('ADMIN', 'PARTNER'), adminController.deleteUser);
+router.get('/users', searchLimiter, authorize('ADMIN'), adminController.getUsers);
+router.post('/users', writeLimiter, authorize('ADMIN'), adminController.createUser);
+router.put('/users/:id', writeLimiter, authorize('ADMIN'), adminController.updateUser);
+router.patch('/users/:id/toggle-status', writeLimiter, authorize('ADMIN'), adminController.toggleUserStatus);
+router.delete('/users/:id', writeLimiter, authorize('ADMIN'), adminController.deleteUser);
 
 // ==================== INTERN MANAGEMENT ====================
 router.get('/interns/:userId', adminLimiter, authorize('ADMIN', 'HR', 'PARTNER'), adminController.getInternDetails);
