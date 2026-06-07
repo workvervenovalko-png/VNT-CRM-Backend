@@ -9,6 +9,8 @@ const WorkReport = require('../models/WorkReport'); // New model
 const { generateExcel, generatePDF } = require('../utils/exportUtils');
 const { createNotification } = require('./notificationController');
 const { escapeRegex } = require('../utils/securityUtils');
+const { sendEmail } = require('../utils/emailService');
+const { getAssignmentUpdateTemplate } = require('../utils/emailTemplates');
 
 // ==================== DASHBOARD ====================
 
@@ -901,6 +903,20 @@ exports.assignTaskToIntern = async (req, res) => {
       'Task'
     );
 
+    // Send Email
+    if (user.email) {
+      await sendEmail({
+        to: user.email,
+        subject: `New Task Assigned: ${title}`,
+        html: getAssignmentUpdateTemplate(
+          user.fullName,
+          'Task',
+          `Title: ${title}<br/>Due Date: ${dueDate ? new Date(dueDate).toLocaleDateString() : 'N/A'}<br/>Description: ${description || 'N/A'}`,
+          'http://localhost:5173/intern/dashboard'
+        )
+      }).catch(err => console.error('Failed to send task email:', err));
+    }
+
     res.status(201).json({
       success: true,
       message: 'Task assigned successfully',
@@ -931,6 +947,40 @@ exports.assignTeamToLeader = async (req, res) => {
       { _id: { $in: internIds }, role: 'INTERN' },
       { $set: { teamLeader: teamLeaderId } }
     );
+
+    // Get Intern Details for Email
+    const assignedInterns = await User.find({ _id: { $in: internIds } });
+    
+    // Notify Team Leader via Email
+    if (teamLeader.email) {
+      const internNames = assignedInterns.map(i => i.fullName).join(', ');
+      await sendEmail({
+        to: teamLeader.email,
+        subject: 'New Interns Assigned to Your Team',
+        html: getAssignmentUpdateTemplate(
+          teamLeader.fullName,
+          'Team Assignment',
+          `The following interns have been assigned to your team: ${internNames}`,
+          'http://localhost:5173/team-leader'
+        )
+      }).catch(err => console.error('Failed to send TL email:', err));
+    }
+
+    // Notify each Intern via Email
+    for (const intern of assignedInterns) {
+      if (intern.email) {
+        await sendEmail({
+          to: intern.email,
+          subject: 'You have been assigned to a Team Leader',
+          html: getAssignmentUpdateTemplate(
+            intern.fullName,
+            'Team Leader Assignment',
+            `Your new Team Leader is: ${teamLeader.fullName}`,
+            'http://localhost:5173/intern/dashboard'
+          )
+        }).catch(err => console.error('Failed to send intern email:', err));
+      }
+    }
 
     res.json({
       success: true,

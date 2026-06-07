@@ -1,5 +1,7 @@
 const User = require('../models/User');
 const { createNotification } = require('./notificationController');
+const { sendEmail } = require('../utils/emailService');
+const { getAssignmentUpdateTemplate } = require('../utils/emailTemplates');
 
 // Get all interns mapped to the Team Leader
 exports.getTeamInterns = async (req, res) => {
@@ -98,6 +100,20 @@ exports.assignTaskToIntern = async (req, res) => {
       null,
       'Task'
     );
+
+    // Send Email
+    if (user.email) {
+      await sendEmail({
+        to: user.email,
+        subject: `New Task Assigned by TL: ${title}`,
+        html: getAssignmentUpdateTemplate(
+          user.fullName,
+          'Task',
+          `Title: ${title}<br/>Due Date: ${dueDate ? new Date(dueDate).toLocaleDateString() : 'N/A'}<br/>Description: ${description || 'N/A'}<br/><br/>Assigned by your Team Leader.`,
+          'http://localhost:5173/intern/dashboard'
+        )
+      }).catch(err => console.error('Failed to send task email (TL):', err));
+    }
 
     res.status(201).json({
       success: true,
