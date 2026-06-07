@@ -14,7 +14,8 @@ const ROLES = {
     HR: 'HR',
     EMPLOYEE: 'EMPLOYEE',
     INTERN: 'INTERN',
-    SALES: 'SALES'
+    SALES: 'SALES',
+    TEAM_LEADER: 'TEAM_LEADER'
 };
 
 const userSchema = new mongoose.Schema({
@@ -103,6 +104,13 @@ const userSchema = new mongoose.Schema({
     department: {
         type: String,
         trim: true,
+        default: null
+    },
+
+    // Reference to a Team Leader (used mainly for INTERN)
+    teamLeader: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'User',
         default: null
     },
 

@@ -912,6 +912,36 @@ exports.assignTaskToIntern = async (req, res) => {
   }
 };
 
+// ==================== TEAM ASSIGNMENT ====================
+exports.assignTeamToLeader = async (req, res) => {
+  try {
+    const { teamLeaderId, internIds } = req.body;
+
+    if (!teamLeaderId || !internIds || !Array.isArray(internIds)) {
+      return res.status(400).json({ success: false, message: 'Valid Team Leader ID and Intern IDs array are required' });
+    }
+
+    const teamLeader = await User.findById(teamLeaderId);
+    if (!teamLeader || teamLeader.role !== 'TEAM_LEADER') {
+      return res.status(404).json({ success: false, message: 'Team Leader not found or invalid role' });
+    }
+
+    // Update all interns in the internIds array to belong to this teamLeader
+    await User.updateMany(
+      { _id: { $in: internIds }, role: 'INTERN' },
+      { $set: { teamLeader: teamLeaderId } }
+    );
+
+    res.json({
+      success: true,
+      message: `Successfully assigned ${internIds.length} intern(s) to Team Leader ${teamLeader.fullName}`
+    });
+  } catch (error) {
+    console.error('Assign Team to Leader Error:', error);
+    res.status(500).json({ success: false, message: 'Failed to assign team' });
+  }
+};
+
 // ==================== SETTINGS ====================
 
 // GET /api/admin/settings - Get company settings

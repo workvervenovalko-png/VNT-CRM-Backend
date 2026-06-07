@@ -29,6 +29,7 @@ const adminRoutes = require('./routes/adminRoutes');
 const internRoutes = require('./routes/internRoutes');
 const attendanceRoutes = require('./routes/attendance.routes');
 const notificationRoutes = require('./routes/notificationRoutes');
+const teamLeaderRoutes = require('./routes/teamLeaderRoutes');
 
 
 
@@ -152,6 +153,8 @@ app.use('/api/notifications', notificationRoutes);
 app.use('/api/hr', hrRoutes);
 // User Routes
 app.use('/api/users', userRoutes);
+// Team Leader Routes
+app.use('/api/team-leader', teamLeaderRoutes);
 
 // Root endpoint
 app.get('/', (req, res) => {

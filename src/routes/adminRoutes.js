@@ -36,6 +36,9 @@ router.get('/interns/:userId', adminLimiter, authorize('ADMIN', 'HR', 'PARTNER')
 router.put('/interns/:userId', writeLimiter, authorize('ADMIN', 'HR'), adminController.updateInternByAdmin);
 router.post('/interns/:userId/assign-task', writeLimiter, authorize('ADMIN', 'HR', 'PARTNER'), adminController.assignTaskToIntern);
 
+// ==================== TEAM ASSIGNMENT ====================
+router.post('/assign-team', writeLimiter, authorize('ADMIN', 'PARTNER'), adminController.assignTeamToLeader);
+
 // ==================== ATTENDANCE ====================
 router.get('/attendance', searchLimiter, authorize('ADMIN', 'HR', 'PARTNER'), attendanceController.getAttendance);
 router.get('/attendance/summary', authorize('ADMIN', 'HR', 'PARTNER'), attendanceController.getAttendanceSummary);
