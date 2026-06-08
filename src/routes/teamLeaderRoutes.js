@@ -32,4 +32,8 @@ router.patch('/leaves/:leaveId', teamLeaderController.reviewLeave);
 // Reports
 router.get('/reports', teamLeaderController.getTeamReports);
 
+// Meetings
+router.get('/colleagues', teamLeaderController.getColleaguesForMeeting);
+router.post('/meetings', teamLeaderController.scheduleMeeting);
+
 module.exports = router;

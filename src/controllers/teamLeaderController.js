@@ -3,6 +3,7 @@ const Attendance = require('../models/Attendance');
 const { createNotification } = require('./notificationController');
 const { sendEmail } = require('../utils/emailService');
 const { getAssignmentUpdateTemplate } = require('../utils/emailTemplates');
+const Meeting = require('../models/Meeting');
 
 // Get all interns mapped to the Team Leader
 exports.getTeamInterns = async (req, res) => {
@@ -382,5 +383,111 @@ exports.getTeamReports = async (req, res) => {
   } catch (error) {
     console.error('Get team reports error:', error);
     res.status(500).json({ success: false, message: 'Failed to fetch team reports' });
+  }
+};
+
+// ===================== MEETING FEATURES =====================
+
+exports.getColleaguesForMeeting = async (req, res) => {
+  try {
+    const tlId = req.user._id;
+
+    // Fetch interns assigned to TL
+    const interns = await User.find({ role: 'INTERN', teamLeader: tlId }).select('fullName email role');
+    
+    // Fetch Admins and Partners
+    const adminsAndPartners = await User.find({ role: { $in: ['ADMIN', 'PARTNER'] } }).select('fullName email role');
+
+    res.json({
+      success: true,
+      data: {
+        interns,
+        adminsAndPartners
+      }
+    });
+  } catch (error) {
+    console.error('Get colleagues error:', error);
+    res.status(500).json({ success: false, message: 'Failed to fetch colleagues' });
+  }
+};
+
+exports.scheduleMeeting = async (req, res) => {
+  try {
+    const { title, description, meetLink, scheduledAt, attendees } = req.body;
+    const tlId = req.user._id;
+
+    const meeting = await Meeting.create({
+      title,
+      description,
+      meetLink,
+      scheduledAt,
+      host: tlId,
+      attendees
+    });
+
+    // Fetch attendee details to send emails and notifications
+    const users = await User.find({ _id: { $in: attendees } }).select('email fullName');
+    const emails = users.map(u => u.email);
+
+    // Send email to attendees
+    if (emails.length > 0) {
+      const emailHtml = `
+        <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #eee; border-radius: 10px;">
+          <h2 style="color: #4f46e5;">Meeting Scheduled: ${title}</h2>
+          <p>Hello,</p>
+          <p>You have been invited to a meeting scheduled by <strong>${req.user.fullName}</strong>.</p>
+          <div style="background-color: #f8fafc; padding: 15px; border-radius: 8px; margin: 20px 0;">
+            <p><strong>Date & Time:</strong> ${new Date(scheduledAt).toLocaleString()}</p>
+            <p><strong>Description:</strong> ${description || 'No description provided.'}</p>
+          </div>
+          <a href="${meetLink}" style="display: inline-block; background-color: #4f46e5; color: white; padding: 12px 24px; text-decoration: none; border-radius: 8px; font-weight: bold;">Join Meeting</a>
+          <p style="margin-top: 30px; font-size: 12px; color: #64748b;">This is an automated notification from Verve Nova Tech CRM.</p>
+        </div>
+      `;
+
+      await sendEmail({
+        to: emails,
+        subject: `Meeting Invitation: ${title}`,
+        html: emailHtml
+      });
+
+      // Create in-app notifications
+      for (const user of users) {
+        await createNotification(
+          user._id,
+          `You have a new meeting scheduled: ${title} on ${new Date(scheduledAt).toLocaleString()}`,
+          'info',
+          null,
+          'Meeting'
+        );
+      }
+    }
+
+    res.status(201).json({ success: true, message: 'Meeting scheduled successfully', data: meeting });
+  } catch (error) {
+    console.error('Schedule meeting error:', error);
+    res.status(500).json({ success: false, message: 'Failed to schedule meeting' });
+  }
+};
+
+exports.getMeetings = async (req, res) => {
+  try {
+    const userId = req.user._id;
+
+    // Fetch meetings where the user is either the host or an attendee
+    const meetings = await Meeting.find({
+      $or: [
+        { host: userId },
+        { attendees: userId }
+      ]
+    })
+    .populate('host', 'fullName email role')
+    .populate('attendees', 'fullName email role')
+    .sort({ scheduledAt: 1 });
+
+    res.json({ success: true, data: meetings });
+  } catch (error) {
+    console.error('Get meetings error:', error);
+    res.status(500).json({ success: false, message: 'Failed to fetch meetings' });
   }
 };
